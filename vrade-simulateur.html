@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VRADE · Simulateur d'estimation par comparaison marché</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#161412;
+    --panel:#211e1a;
+    --panel-2:#2a2622;
+    --line: rgba(242,239,231,0.11);
+    --line-strong: rgba(242,239,231,0.2);
+    --text:#F2EFE7;
+    --text-dim:#a89e8f;
+    --text-faint:#6f665a;
+    --ember:#e8501f;
+    --ember-2:#ff8656;
+    --teal:#5aab9f;
+    --teal-dim: rgba(90,171,159,0.15);
+    --ember-dim: rgba(232,80,31,0.15);
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .grain{
+    position:fixed; inset:0; pointer-events:none; z-index:1;
+    opacity:0.05; mix-blend-mode:overlay;
+  }
+  .glow{
+    position:fixed; top:-20%; right:-10%; width:60vw; height:60vw;
+    background:radial-gradient(circle, rgba(232,80,31,0.16), transparent 70%);
+    pointer-events:none; z-index:0;
+  }
+  a{color:var(--ember-2);}
+  h1,h2,h3{font-family:'Space Grotesk', sans-serif; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:0.72rem; letter-spacing:0.16em;
+    text-transform:uppercase; color:var(--ember-2); display:flex; align-items:center; gap:0.6em;
+  }
+  .eyebrow::before{content:''; width:7px; height:7px; background:var(--ember); border-radius:1px; display:inline-block; transform:rotate(45deg);}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px; position:relative; z-index:2;}
+
+  /* HERO */
+  header.hero{padding:72px 0 40px; position:relative;}
+  .plate{
+    font-family:'IBM Plex Mono', monospace; font-size:0.7rem; color:var(--text-faint);
+    letter-spacing:0.1em; margin-bottom:28px; display:flex; justify-content:space-between;
+    border-bottom:1px solid var(--line); padding-bottom:14px; flex-wrap:wrap; gap:8px;
+  }
+  h1.title{font-size:clamp(2.1rem, 5vw, 3.4rem); font-weight:700; margin:18px 0 20px; max-width:16ch;}
+  h1.title em{font-style:normal; color:var(--ember-2);}
+  .lede{color:var(--text-dim); max-width:56ch; font-size:1.02rem;}
+
+  .torn{
+    width:100%; height:26px; margin:44px 0 0;
+    background: repeating-linear-gradient(115deg, var(--bg) 0 9px, transparent 9px 18px), var(--panel);
+    -webkit-mask: linear-gradient(#000,#000);
+  }
+  .torn-svg{display:block; width:100%; height:22px;}
+
+  /* FORM CARD */
+  section.form-section{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:36px; margin-top:0;}
+  .form-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:28px; flex-wrap:wrap; gap:10px;}
+  .form-head h2{font-size:1.3rem;}
+  .step-count{font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--text-faint);}
+
+  .grid{display:grid; grid-template-columns:repeat(4, 1fr); gap:26px 20px;}
+  .field{display:flex; flex-direction:column; gap:8px;}
+  .field.span-2{grid-column:span 2;}
+  .field.span-4{grid-column:span 4;}
+  label{font-family:'IBM Plex Mono', monospace; font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim);}
+  input, select{
+    background:transparent; border:none; border-bottom:1px solid var(--line-strong);
+    color:var(--text); font-family:'Inter', sans-serif; font-size:0.98rem; padding:8px 2px;
+    outline:none; transition:border-color .15s ease;
+  }
+  select{
+    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23a89e8f' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 2px center; padding-right:18px; cursor:pointer;
+  }
+  select:disabled{cursor:not-allowed; opacity:0.5;}
+  select option{background:var(--panel-2); color:var(--text);}
+  input::placeholder{color:var(--text-faint);}
+  input:focus, select:focus{border-color:var(--ember);}
+  input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible{
+    outline:2px solid var(--ember-2); outline-offset:3px;
+  }
+  .hint{font-size:0.76rem; color:var(--text-faint); margin-top:2px;}
+
+  .actions{display:flex; align-items:center; gap:18px; margin-top:34px; flex-wrap:wrap;}
+  button.primary{
+    background:var(--ember); color:#181310; border:none; font-family:'Space Grotesk', sans-serif;
+    font-weight:600; font-size:0.95rem; padding:14px 26px; border-radius:2px; cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  button.primary:hover{background:var(--ember-2);}
+  button.primary:active{transform:scale(0.98);}
+  button.ghost{
+    background:transparent; color:var(--text-dim); border:1px solid var(--line-strong);
+    font-family:'IBM Plex Mono', monospace; font-size:0.78rem; padding:12px 18px; border-radius:2px; cursor:pointer;
+  }
+  button.ghost:hover{color:var(--text); border-color:var(--text-dim);}
+  .error-msg{color:var(--ember-2); font-size:0.82rem; font-family:'IBM Plex Mono', monospace;}
+
+  /* RESULT */
+  section.result{margin-top:56px; display:none;}
+  section.result.visible{display:block; animation:rise .5s ease both;}
+  .result-toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;}
+  @media (prefers-reduced-motion:reduce){ section.result.visible{animation:none;} }
+  @keyframes rise{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+
+  .result-top{display:grid; grid-template-columns:1.1fr 1fr; gap:0; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  @media (max-width:680px){.result-top{grid-template-columns:1fr;}}
+  .gauge-panel{background:var(--panel); padding:38px; display:flex; flex-direction:column; align-items:center; border-right:1px solid var(--line);}
+  @media (max-width:680px){.gauge-panel{border-right:none; border-bottom:1px solid var(--line);}}
+  .gauge-stage{position:relative; width:100%; max-width:340px;}
+  .gauge-svg{width:100%; display:block; overflow:visible;}
+  .needle{transform-origin:170px 170px; transition:transform 1s cubic-bezier(.2,.9,.15,1);}
+  @media (prefers-reduced-motion:reduce){ .needle{transition:none;} }
+  #gaugeBand{transition:stroke-dasharray 1s cubic-bezier(.2,.9,.15,1), stroke-dashoffset 1s cubic-bezier(.2,.9,.15,1);}
+  @media (prefers-reduced-motion:reduce){ #gaugeBand{transition:none;} }
+  .gauge-readout{position:absolute; left:0; right:0; top:71%; text-align:center; pointer-events:none;}
+  .vrade-value{font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:clamp(1.5rem, 5vw, 2.1rem); text-align:center;}
+  .vrade-label{font-family:'IBM Plex Mono', monospace; font-size:0.68rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-faint); text-align:center; margin-top:4px;}
+  .range-row{display:flex; justify-content:space-between; width:100%; max-width:340px; margin-top:14px; font-family:'IBM Plex Mono', monospace; font-size:0.78rem; color:var(--text-dim);}
+
+  .detail-panel{background:var(--panel-2); padding:38px; display:flex; flex-direction:column; gap:18px;}
+  .detail-row{display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px dashed var(--line); padding-bottom:12px;}
+  .detail-row .k{color:var(--text-dim); font-size:0.86rem;}
+  .detail-row .v{font-family:'IBM Plex Mono', monospace; font-size:0.95rem;}
+  .confidence{display:flex; align-items:center; gap:12px; margin-top:6px;}
+  .conf-bar{flex:1; height:6px; background:var(--line); border-radius:3px; overflow:hidden;}
+  .conf-fill{height:100%; background:linear-gradient(90deg, var(--ember), var(--teal));}
+  .conf-num{font-family:'IBM Plex Mono', monospace; font-size:0.85rem; color:var(--teal);}
+
+  /* TABLE */
+  section.table-section{margin-top:44px;}
+  .table-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; flex-wrap:wrap; gap:8px;}
+  .table-head h2{font-size:1.15rem;}
+  .table-scroll{width:100%; overflow-x:auto;}
+  table{width:100%; min-width:640px; border-collapse:collapse; font-size:0.88rem;}
+  thead th{
+    text-align:left; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; letter-spacing:0.09em;
+    text-transform:uppercase; color:var(--text-faint); border-bottom:1px solid var(--line-strong); padding:10px 12px;
+  }
+  tbody td{padding:12px; border-bottom:1px solid var(--line); font-family:'IBM Plex Mono', monospace; color:var(--text-dim);}
+  tbody td:first-child{color:var(--text); font-family:'Inter', sans-serif;}
+  tbody tr:hover{background:rgba(242,239,231,0.02);}
+  .tag{font-size:0.7rem; padding:2px 8px; border-radius:10px; font-family:'IBM Plex Mono', monospace;}
+  .tag.above{background:var(--ember-dim); color:var(--ember-2);}
+  .tag.below{background:var(--teal-dim); color:var(--teal);}
+  .tag.median{background:rgba(242,239,231,0.1); color:var(--text-dim);}
+
+  /* METHOD */
+  section.method{margin-top:56px; border-top:1px solid var(--line); padding-top:32px;}
+  details{border-bottom:1px solid var(--line); padding:16px 0;}
+  summary{cursor:pointer; font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:0.98rem; list-style:none; display:flex; justify-content:space-between; align-items:center;}
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:'+'; color:var(--ember-2); font-size:1.2rem; font-family:'IBM Plex Mono', monospace;}
+  details[open] summary::after{content:'−';}
+  details p{color:var(--text-dim); font-size:0.92rem; margin:14px 0 4px; max-width:70ch;}
+
+  .disclaimer{
+    margin-top:40px; background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--ember);
+    padding:20px 24px; font-size:0.84rem; color:var(--text-dim); border-radius:0 var(--radius) var(--radius) 0;
+  }
+  .disclaimer strong{color:var(--text);}
+
+  footer{margin:60px 0 40px; text-align:center; color:var(--text-faint); font-family:'IBM Plex Mono', monospace; font-size:0.72rem;}
+
+  /* ===== RESPONSIVE ===== */
+
+  /* Tablette (portrait / paysage étroit) */
+  @media (max-width:900px){
+    .wrap{padding:0 20px;}
+    header.hero{padding:56px 0 32px;}
+    .grid{grid-template-columns:repeat(2, 1fr); gap:22px 18px;}
+    .field.span-4{grid-column:span 2;}
+    section.form-section{padding:28px;}
+  }
+
+  /* Téléphone */
+  @media (max-width:620px){
+    .wrap{padding:0 16px;}
+    header.hero{padding:40px 0 26px;}
+    .plate{font-size:0.62rem; gap:6px;}
+    h1.title{font-size:clamp(1.7rem, 8vw, 2.3rem); max-width:none;}
+    .lede{font-size:0.94rem;}
+
+    section.form-section{padding:20px;}
+    .form-head h2{font-size:1.12rem;}
+    .grid{grid-template-columns:1fr; gap:18px;}
+    .field.span-2, .field.span-4{grid-column:span 1;}
+    input, select{font-size:1rem; padding:10px 2px;} /* 16px+ avoids iOS auto-zoom on focus */
+
+    .actions{flex-direction:column; align-items:stretch; gap:12px; margin-top:26px;}
+    .actions button{width:100%; text-align:center;}
+    .error-msg{order:-1;}
+
+    .gauge-panel, .detail-panel{padding:22px;}
+    .gauge-stage{max-width:280px;}
+    .vrade-label{font-size:0.62rem;}
+    .detail-row{flex-direction:column; align-items:flex-start; gap:4px;}
+    .detail-row .v{font-size:0.88rem;}
+
+    section.table-section{margin-top:32px;}
+    .table-head h2{font-size:1.02rem;}
+    table{min-width:560px; font-size:0.82rem;}
+    thead th, tbody td{padding:9px 10px;}
+
+    section.method{margin-top:40px;}
+    summary{font-size:0.92rem;}
+    .disclaimer{padding:16px 18px; font-size:0.8rem;}
+  }
+
+  /* Très petits écrans */
+  @media (max-width:360px){
+    h1.title{font-size:1.55rem;}
+    .gauge-stage{max-width:240px;}
+    table{min-width:520px;}
+  }
+
+  /* ===== EXPORT / IMPRESSION ===== */
+  @media print{
+    body{background:#fff; color:#161412;}
+    .grain, .glow, .torn-svg, .no-print, section.form-section, footer{display:none !important;}
+    section.result{display:block !important; margin-top:0;}
+    :root{
+      --panel:#fff; --panel-2:#f6f4ef; --text:#161412; --text-dim:#4a4238;
+      --text-faint:#736b5e; --line:rgba(0,0,0,0.14); --line-strong:rgba(0,0,0,0.32);
+    }
+    .wrap{max-width:100%; padding:0;}
+    header.hero{padding:0 0 16px;}
+    .result-top, .gauge-panel, .detail-panel, table, .disclaimer, section.form-section{border-color:#000 !important;}
+    a{color:#000; text-decoration:underline;}
+    details{page-break-inside:avoid;}
+    summary::after{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<svg class="grain" width="100%" height="100%">
+  <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter>
+  <rect width="100%" height="100%" filter="url(#n)"/>
+</svg>
+<div class="glow"></div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="plate">
+      <span>DOSSIER N° <span id="dossierNum">—</span></span>
+      <span>SIMULATEUR D'EXPERTISE · USAGE PÉDAGOGIQUE</span>
+    </div>
+    <p class="eyebrow">Estimation VRADE par comparaison marché</p>
+    <h1 class="title">Quelle est la <em>valeur de remplacement</em> du véhicule avant sinistre&nbsp;?</h1>
+    <p class="lede">Renseignez la fiche du véhicule incendié. Le simulateur reconstitue un panel de véhicules d'occasion comparables sur le marché — même modèle, motorisation et kilométrage proches — puis en déduit une fourchette de VRADE, comme le ferait un expert automobile.</p>
+  </header>
+
+  <svg class="torn-svg" viewBox="0 0 1000 22" preserveAspectRatio="none">
+    <polyline points="0,4 40,16 80,6 120,18 160,3 200,14 240,8 280,20 320,5 360,15 400,7 440,19 480,4 520,16 560,6 600,18 640,3 680,14 720,8 760,20 800,5 840,15 880,7 920,19 960,4 1000,12"
+      fill="none" stroke="rgba(242,239,231,0.14)" stroke-width="1"/>
+  </svg>
+
+  <section class="form-section">
+    <div class="form-head">
+      <h2>Fiche véhicule</h2>
+      <span class="step-count">01 — IDENTIFICATION</span>
+    </div>
+
+    <form id="vradeForm">
+      <div class="grid">
+        <div class="field">
+          <label for="marque">Marque</label>
+          <select id="marque" required>
+            <option value="">— Choisir —</option>
+            <option value="__autre__">Autre marque…</option>
+          </select>
+          <input id="marqueAutre" type="text" placeholder="Saisir la marque" style="display:none; margin-top:6px;">
+        </div>
+        <div class="field">
+          <label for="modele">Modèle</label>
+          <select id="modele" required disabled>
+            <option value="">— Choisir une marque d'abord —</option>
+          </select>
+          <input id="modeleAutre" type="text" placeholder="Saisir le modèle" style="display:none; margin-top:6px;">
+        </div>
+        <div class="field">
+          <label for="finition">Finition / version (optionnel)</label>
+          <select id="finition" disabled>
+            <option value="">— Choisir une marque d'abord —</option>
+          </select>
+          <input id="finitionAutre" type="text" placeholder="Saisir la finition" style="display:none; margin-top:6px;">
+        </div>
+        <div class="field">
+          <label for="carburant">Motorisation</label>
+          <select id="carburant">
+            <option value="essence">Essence</option>
+            <option value="diesel">Diesel</option>
+            <option value="hybride">Hybride</option>
+            <option value="electrique">Électrique</option>
+            <option value="gpl">GPL</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="annee">Année de mise en circulation</label>
+          <input id="annee" type="number" placeholder="2019" min="1990" max="2026" required>
+        </div>
+        <div class="field">
+          <label for="km">Kilométrage</label>
+          <input id="km" type="number" placeholder="78000" min="0" required>
+        </div>
+        <div class="field">
+          <label for="dateSinistre">Date du sinistre</label>
+          <input id="dateSinistre" type="date">
+        </div>
+        <div class="field">
+          <label for="etat">État avant sinistre</label>
+          <select id="etat">
+            <option value="0.05">Excellent — entretien suivi, carnet complet</option>
+            <option value="0" selected>Bon — usure normale</option>
+            <option value="-0.05">Moyen — usure marquée</option>
+            <option value="-0.12">Dégradé — défauts visibles connus</option>
+          </select>
+        </div>
+
+        <div class="field span-2">
+          <label for="prixNeuf">Prix catalogue neuf (optionnel)</label>
+          <input id="prixNeuf" type="number" placeholder="Laisser vide pour estimation automatique" min="0">
+          <span class="hint">Utilisé pour affiner la courbe de décote si connu.</span>
+        </div>
+        <div class="field span-2">
+          <label for="localisation">Zone géographique (optionnel)</label>
+          <input id="localisation" type="text" placeholder="Ex. Île-de-France">
+          <span class="hint">Sert uniquement de repère pour l'affichage des annonces.</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="primary">Lancer la recherche comparative</button>
+        <button type="button" class="ghost" id="resetBtn">Nouvelle recherche</button>
+        <span class="error-msg" id="errorMsg"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="result" id="resultSection">
+    <div class="result-toolbar no-print">
+      <span class="step-count">02 — RÉSULTAT DE LA RECHERCHE COMPARATIVE</span>
+      <button type="button" class="ghost" id="exportBtn">⭳ Exporter le dossier (PDF)</button>
+    </div>
+    <div class="result-top">
+      <div class="gauge-panel">
+        <div class="gauge-stage">
+        <svg class="gauge-svg" viewBox="0 0 340 214" role="img" aria-label="Jauge de la VRADE estimée dans sa fourchette basse-haute">
+          <defs>
+            <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#5aab9f"/>
+              <stop offset="100%" stop-color="#e8501f"/>
+            </linearGradient>
+            <filter id="needleShadow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/>
+            </filter>
+          </defs>
+
+          <!-- track -->
+          <path d="M 20 170 A 150 150 0 0 1 320 170" fill="none" stroke="rgba(242,239,231,0.2)" stroke-width="10" stroke-linecap="round"/>
+
+          <!-- ticks -->
+          <g stroke="#6f665a" stroke-width="2" stroke-linecap="round">
+            <line x1="20" y1="170" x2="34" y2="170"/>
+            <line x1="63.93" y1="63.93" x2="73.83" y2="73.83"/>
+            <line x1="170" y1="20" x2="170" y2="34"/>
+            <line x1="276.07" y1="63.93" x2="266.17" y2="73.83"/>
+            <line x1="320" y1="170" x2="306" y2="170"/>
+          </g>
+
+          <!-- fourchette basse / haute (bande de confiance) -->
+          <path id="gaugeBand" d="M 20 170 A 150 150 0 0 1 320 170" fill="none" stroke="url(#gaugeGradient)"
+            stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" stroke-dashoffset="0"/>
+          <circle id="bandDotLow" cx="20" cy="170" r="4.5" fill="#5aab9f"/>
+          <circle id="bandDotHigh" cx="320" cy="170" r="4.5" fill="#ff8656"/>
+
+          <text id="gaugeLabelLow" x="20" y="200" font-family="IBM Plex Mono, monospace" font-size="11" fill="#6f665a" text-anchor="start">bas —</text>
+          <text id="gaugeLabelHigh" x="320" y="200" font-family="IBM Plex Mono, monospace" font-size="11" fill="#6f665a" text-anchor="end">haut —</text>
+
+          <g class="needle" id="needle" filter="url(#needleShadow)">
+            <polygon points="170,52 165,170 175,170" fill="#ff8656"/>
+            <line x1="170" y1="170" x2="170" y2="190" stroke="#e8501f" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="170" cy="170" r="12" fill="#211e1a" stroke="#ff8656" stroke-width="2.5"/>
+            <circle cx="170" cy="170" r="4" fill="#ff8656"/>
+          </g>
+        </svg>
+        <div class="gauge-readout">
+          <div class="vrade-value mono" id="vradeValue">—</div>
+          <div class="vrade-label">VRADE estimée</div>
+        </div>
+        </div>
+        <div class="vrade-value mono" id="vradeValue">—</div>
+        <div class="vrade-label">VRADE estimée</div>
+        <div class="range-row">
+          <span id="rangeLow">bas —</span>
+          <span id="rangeHigh">haut —</span>
+        </div>
+      </div>
+
+      <div class="detail-panel">
+        <div class="detail-row"><span class="k">Véhicule évalué</span><span class="v" id="vehLabel">—</span></div>
+        <div class="detail-row"><span class="k">Âge au sinistre</span><span class="v" id="ageOut">—</span></div>
+        <div class="detail-row"><span class="k">Kilométrage vs référence</span><span class="v" id="kmOut">—</span></div>
+        <div class="detail-row"><span class="k">Segment / catégorie</span><span class="v" id="segOut">—</span></div>
+        <div class="detail-row"><span class="k">Ajustement état déclaré</span><span class="v" id="etatOut">—</span></div>
+        <div class="detail-row"><span class="k">Composition de l'échantillon</span><span class="v" id="mixOut">—</span></div>
+        <div>
+          <span class="k">Indice de confiance de l'échantillon</span>
+          <div class="confidence">
+            <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+            <span class="conf-num" id="confNum">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="table-section">
+      <div class="table-head">
+        <h2>Registre des annonces comparables</h2>
+        <span class="step-count" id="sampleCount">ÉCHANTILLON — 0 ANNONCES</span>
+      </div>
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Annonce</th><th>Année</th><th>Km</th><th>Prix affiché</th><th>Prix retenu</th><th>Écart / médiane</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      </div>
+    </section>
+  </section>
+
+  <section class="method">
+    <p class="eyebrow" style="margin-bottom:20px;">Méthodologie</p>
+
+    <details open>
+      <summary>Comment la VRADE est-elle calculée ici&nbsp;?</summary>
+      <p>Le simulateur reconstitue un panel mixte de véhicules comparables (même segment, motorisation, année et kilométrage proches), à la fois chez des particuliers et des professionnels, puis retient la valeur médiane des prix de transaction estimés comme base de VRADE. Cette base est ensuite ajustée d'un coefficient lié à l'état général déclaré du véhicule avant le sinistre. C'est la même logique que la méthode par comparaison utilisée par les experts automobiles : la VRADE correspond au coût de remplacement par un véhicule d'occasion équivalent, tel qu'observable sur le marché à la date du sinistre.</p>
+    </details>
+    <details>
+      <summary>Quelles sources un expert mobilise-t-il réellement&nbsp;?</summary>
+      <p>En pratique, un expert s'appuie surtout sur <strong>La Centrale</strong> (cote et annonces professionnelles, appréciée pour sa traçabilité) et <strong>Leboncoin</strong> (fort volume de particuliers). Il regarde aussi les stocks des <strong>réseaux d'occasion des constructeurs</strong> et des <strong>négociants locaux</strong>. Facebook Marketplace est parfois consulté mais reste secondaire, car moins fiable et moins traçable que ces sources. Le simulateur reproduit cette même hiérarchie de sources dans la colonne « Annonce », mais génère les annonces algorithmiquement : elles ne proviennent d'aucune base de données réelle.</p>
+    </details>
+    <details>
+      <summary>Pourquoi deux colonnes « Prix affiché » et « Prix retenu »&nbsp;?</summary>
+      <p>Un prix affiché n'est pas toujours le prix de vente final. Pour les annonces de <strong>particuliers</strong>, le simulateur applique une réfaction de 5 à 8 % afin d'approcher le prix de transaction réel après négociation. Pour les annonces de <strong>professionnels</strong>, le prix affiché est au contraire tiré légèrement vers le haut car il inclut souvent une garantie de 6 à 12 mois, et la marge de négociation y est plus faible. C'est ce prix « retenu » — pas le prix affiché brut — qui sert au calcul de la VRADE.</p>
+    </details>
+    <details>
+      <summary>Que signifie l'indice de confiance&nbsp;?</summary>
+      <p>Il reflète la dispersion des prix retenus au sein de l'échantillon comparable : plus les annonces sont resserrées autour de la médiane, plus l'indice est élevé, et plus l'estimation de VRADE peut être considérée comme représentative du marché.</p>
+    </details>
+  </section>
+
+  <div class="disclaimer">
+    <strong>Outil de démonstration.</strong> Cette page simule une méthode d'estimation à des fins pédagogiques et n'utilise aucune donnée de marché réelle. Elle ne constitue ni une expertise, ni un document opposable à un assureur. Pour une évaluation VRADE opposable, faites appel à un expert automobile agréé ou à un expert d'assuré indépendant.
+  </div>
+
+  <footer>SIMULATEUR VRADE · DOCUMENT NON CONTRACTUEL</footer>
+</div>
+
+<script>
+(function(){
+  const form = document.getElementById('vradeForm');
+  const resultSection = document.getElementById('resultSection');
+  const errorMsg = document.getElementById('errorMsg');
+  const dossierNum = document.getElementById('dossierNum');
+  dossierNum.textContent = 'VR-' + Math.floor(1000 + Math.random()*8999);
+
+  document.getElementById('dateSinistre').valueAsDate = new Date();
+
+  // Jeu de données indicatif (marchés France) : marques les plus courantes en occasion,
+  // modèles les plus vendus par marque, et vocabulaire de finitions habituel par marque.
+  // Liste non exhaustive — l'option "Autre" permet toujours une saisie libre.
+  const CAR_DATA = {
+    "Audi": { models: ["A1","A3","A4","A5","A6","Q2","Q3","Q5","Q7","TT","e-tron"], finitions: ["Attraction","Ambiente","Ambition","Ambition Luxe","Design","Design Luxe","S line","Business Line","Advanced"] },
+    "BMW": { models: ["Série 1","Série 2","Série 3","Série 4","Série 5","X1","X2","X3","X5","i3"], finitions: ["Lounge","Business Design","M Sport","Luxury","Edition"] },
+    "Citroën": { models: ["C1","C3","C3 Aircross","C4","C4 Picasso","C5 Aircross","Berlingo"], finitions: ["Live","Feel","Shine","C-Series"] },
+    "Dacia": { models: ["Sandero","Sandero Stepway","Duster","Logan","Spring","Jogger"], finitions: ["Access","Essentiel","Comfort","Journey","Extreme"] },
+    "DS Automobiles": { models: ["DS3","DS4","DS7"], finitions: ["Chic","Business","Performance Line","Rivoli"] },
+    "Fiat": { models: ["500","500X","Panda","Tipo"], finitions: ["Pop","Easy","Lounge","Sport"] },
+    "Ford": { models: ["Fiesta","Focus","Puma","Kuga","EcoSport"], finitions: ["Trend","Titanium","ST-Line","Vignale"] },
+    "Honda": { models: ["Civic","CR-V","Jazz","HR-V"], finitions: ["Comfort","Elegance","Executive"] },
+    "Hyundai": { models: ["i10","i20","i30","Tucson","Kona"], finitions: ["Initia","Intuitive","Creative","Executive"] },
+    "Jaguar": { models: ["E-Pace","F-Pace","XE","XF"], finitions: ["Prestige","Portfolio","R-Sport","HSE"] },
+    "Jeep": { models: ["Renegade","Compass","Cherokee"], finitions: ["Sport","Longitude","Limited","Trailhawk"] },
+    "Kia": { models: ["Picanto","Rio","Ceed","Sportage","Niro"], finitions: ["Motion","Active","GT Line","Design"] },
+    "Land Rover": { models: ["Evoque","Discovery Sport","Range Rover Sport"], finitions: ["S","SE","HSE","Dynamic"] },
+    "Lexus": { models: ["CT 200h","IS","NX","RX"], finitions: ["Confort","Luxe","F Sport"] },
+    "Mazda": { models: ["Mazda2","Mazda3","CX-3","CX-5"], finitions: ["Prime-Line","Center-Line","Exclusive-Line","Sportline"] },
+    "Mercedes-Benz": { models: ["Classe A","Classe B","Classe C","Classe E","GLA","GLC"], finitions: ["Business","Business Line","AMG Line","Avantgarde"] },
+    "MINI": { models: ["Cooper","Countryman","Clubman"], finitions: ["Salt","Pepper","Chili","John Cooper Works"] },
+    "Nissan": { models: ["Micra","Juke","Qashqai","X-Trail"], finitions: ["Visia","Acenta","N-Connecta","Tekna"] },
+    "Opel": { models: ["Corsa","Astra","Crossland","Grandland","Mokka"], finitions: ["Edition","Elegance","GS Line","Ultimate"] },
+    "Peugeot": { models: ["108","208","2008","308","3008","5008","508"], finitions: ["Access","Active","Allure","GT Line","GT"] },
+    "Porsche": { models: ["Macan","Cayenne","911","Panamera"], finitions: ["Base","S","GTS","Turbo"] },
+    "Renault": { models: ["Twingo","Clio","Captur","Megane","Scenic","Kadjar","Talisman"], finitions: ["Life","Zen","Business","Intens","GT Line"] },
+    "Seat": { models: ["Ibiza","Leon","Arona","Ateca"], finitions: ["Reference","Style","FR","Xcellence"] },
+    "Skoda": { models: ["Fabia","Octavia","Kamiq","Karoq","Kodiaq"], finitions: ["Active","Ambition","Style","Sportline"] },
+    "Subaru": { models: ["Impreza","XV","Forester"], finitions: ["Trend","Executive","Premium"] },
+    "Suzuki": { models: ["Swift","Vitara","SX4 S-Cross"], finitions: ["Pack","Avantage","Privilège"] },
+    "Tesla": { models: ["Model 3","Model S","Model X","Model Y"], finitions: ["Standard","Long Range","Performance"] },
+    "Toyota": { models: ["Yaris","Corolla","C-HR","RAV4"], finitions: ["France","Dynamic","Design","Collection","GR Sport"] },
+    "Volkswagen": { models: ["Polo","Golf","T-Roc","T-Cross","Tiguan","Passat"], finitions: ["Trendline","Comfortline","Highline","R-Line"] },
+    "Volvo": { models: ["XC40","XC60","XC90","V60"], finitions: ["Momentum","Inscription","R-Design"] }
+  };
+
+  const marqueSelect = document.getElementById('marque');
+  const modeleSelect = document.getElementById('modele');
+  const finitionSelect = document.getElementById('finition');
+  const marqueAutre = document.getElementById('marqueAutre');
+  const modeleAutre = document.getElementById('modeleAutre');
+  const finitionAutre = document.getElementById('finitionAutre');
+
+  Object.keys(CAR_DATA).sort((a,b) => a.localeCompare(b, 'fr')).forEach(brand => {
+    const opt = document.createElement('option');
+    opt.value = brand; opt.textContent = brand;
+    marqueSelect.insertBefore(opt, marqueSelect.lastElementChild);
+  });
+
+  function toggleAutre(select, autreInput){
+    const isAutre = select.value === '__autre__';
+    autreInput.style.display = isAutre ? 'block' : 'none';
+    if(isAutre) autreInput.focus();
+  }
+
+  function fillSelect(select, items, placeholder){
+    select.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = ''; empty.textContent = placeholder;
+    select.appendChild(empty);
+    items.forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item; opt.textContent = item;
+      select.appendChild(opt);
+    });
+    const autreOpt = document.createElement('option');
+    autreOpt.value = '__autre__'; autreOpt.textContent = 'Autre / non listé…';
+    select.appendChild(autreOpt);
+  }
+
+  marqueSelect.addEventListener('change', function(){
+    toggleAutre(marqueSelect, marqueAutre);
+    const brand = CAR_DATA[marqueSelect.value];
+    if(brand){
+      modeleSelect.disabled = false;
+      finitionSelect.disabled = false;
+      fillSelect(modeleSelect, brand.models, '— Choisir un modèle —');
+      fillSelect(finitionSelect, brand.finitions, '— Aucune / non précisée —');
+    } else if(marqueSelect.value === '__autre__'){
+      modeleSelect.disabled = false;
+      finitionSelect.disabled = false;
+      fillSelect(modeleSelect, [], '— Choisir « Autre » ci-dessous si besoin —');
+      fillSelect(finitionSelect, [], '— Aucune / non précisée —');
+    } else {
+      modeleSelect.disabled = true;
+      finitionSelect.disabled = true;
+      modeleSelect.innerHTML = '<option value="">— Choisir une marque d\'abord —</option>';
+      finitionSelect.innerHTML = '<option value="">— Choisir une marque d\'abord —</option>';
+      modeleAutre.style.display = 'none';
+      finitionAutre.style.display = 'none';
+    }
+  });
+  modeleSelect.addEventListener('change', () => toggleAutre(modeleSelect, modeleAutre));
+  finitionSelect.addEventListener('change', () => toggleAutre(finitionSelect, finitionAutre));
+
+  function fieldValue(select, autreInput){
+    return select.value === '__autre__' ? autreInput.value.trim() : select.value;
+  }
+
+  const BRAND_TIERS = {
+    economy: ['renault','dacia','citroen','citroën','peugeot','fiat','seat','skoda','kia','hyundai','opel','suzuki','mg'],
+    mid: ['volkswagen','vw','ford','toyota','nissan','mazda','honda','mini','alfa romeo','alfa','subaru','jeep'],
+    premium: ['bmw','mercedes','mercedes-benz','audi','volvo','tesla','jaguar','land rover','porsche','lexus','ds','ds automobiles']
+  };
+  const TIER_BASE = { economy: 19000, mid: 26500, premium: 44500 };
+  const TIER_LABEL = { economy: 'Généraliste / entrée-milieu de gamme', mid: 'Généraliste confirmé', premium: 'Premium' };
+
+  function detectTier(marque){
+    const m = marque.trim().toLowerCase();
+    for(const tier in BRAND_TIERS){
+      if(BRAND_TIERS[tier].some(b => m.includes(b))) return tier;
+    }
+    return 'mid';
+  }
+
+  // seeded PRNG so a given query is reproducible
+  function hashStr(s){
+    let h = 1779033703 ^ s.length;
+    for(let i=0;i<s.length;i++){
+      h = Math.imul(h ^ s.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function(){
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      h ^= h >>> 16;
+      return (h >>> 0) / 4294967296;
+    };
+  }
+
+  // Sources réellement mobilisées par les experts automobiles pour le comparatif marché :
+  // La Centrale (cote + annonces pro, très utilisée pour sa traçabilité), Leboncoin (volume
+  // de particuliers), les réseaux de reprise/occasion des constructeurs et les négociants
+  // locaux, et plus ponctuellement Facebook Marketplace (moins privilégié : traçabilité
+  // et fiabilité des données moindres que La Centrale / Leboncoin).
+  const SOURCES = [
+    { name: 'Leboncoin', type: 'particulier' },
+    { name: 'La Centrale — annonce particulier', type: 'particulier' },
+    { name: 'Facebook Marketplace', type: 'particulier' },
+    { name: 'La Centrale — annonce professionnel', type: 'pro' },
+    { name: 'Négociant auto local', type: 'pro' }
+  ];
+  function pickSource(rand, marque){
+    // réseau constructeur : uniquement une chance sur les marques identifiées, sinon
+    // on tire parmi les sources génériques ci-dessus.
+    const constructeurLabel = `Réseau ${marque.trim() || 'constructeur'} (occasion labellisée)`;
+    const pool = SOURCES.concat([{ name: constructeurLabel, type: 'pro' }]);
+    return pool[Math.floor(rand() * pool.length)];
+  }
+  const fmt = new Intl.NumberFormat('fr-FR', {style:'currency', currency:'EUR', maximumFractionDigits:0});
+  const fmtKm = new Intl.NumberFormat('fr-FR');
+
+  function computeAndRender(data){
+    const rand = hashStr(JSON.stringify(data));
+    const currentYear = data.dateSinistre ? new Date(data.dateSinistre).getFullYear() : new Date().getFullYear();
+    const age = Math.max(currentYear - data.annee, 0.2);
+    const tier = detectTier(data.marque);
+    const neuf = data.prixNeuf > 0 ? data.prixNeuf : TIER_BASE[tier];
+
+    const finitionText = data.finition.toLowerCase();
+    let finitionMult = 1;
+    if(/gt|sport|line|rs|amg|m sport|s-line/.test(finitionText)) finitionMult = 1.045;
+    if(/access|life|trend|entry|base/.test(finitionText)) finitionMult = 0.97;
+
+    const expectedKm = age * 15000;
+    const kmRatio = data.km / Math.max(expectedKm, 1000);
+    const kmFactor = Math.min(Math.max(1 - 0.15 * (kmRatio - 1), 0.62), 1.22);
+
+    // Decote avec palier de valeur résiduelle : au-delà d'une dizaine d'années,
+    // la décote ralentit fortement (le marché de l'occasion ne descend quasiment
+    // jamais sous ~15% du prix catalogue, même pour un véhicule ancien).
+    // Calibré sur une annonce réelle : Audi Q3 2.0 TDI 177 (2012, 181 418 km,
+    // catalogue 44 750 €) cotée 10 290 € en 2026 -> floor 0.15 / decay 0.84.
+    const RESIDUAL_FLOOR = 0.15;
+    const DECAY_RATE = 0.84;
+    function ageMult(a){ return RESIDUAL_FLOOR + (1 - RESIDUAL_FLOOR) * Math.pow(DECAY_RATE, a); }
+
+    const baseValue = neuf * ageMult(age) * kmFactor * finitionMult;
+
+    // generate comparable listings
+    const N = 9;
+    const listings = [];
+    for(let i=0;i<N;i++){
+      const yearDelta = Math.round((rand() - 0.5) * 2); // -1,0,1
+      const compYear = Math.min(Math.max(data.annee + yearDelta, 1990), currentYear);
+      const compAge = Math.max(currentYear - compYear, 0.2);
+      const kmSpread = 0.82 + rand() * 0.36;
+      const compKm = Math.round(data.km * kmSpread);
+      const compExpectedKm = compAge * 15000;
+      const compKmRatio = compKm / Math.max(compExpectedKm, 1000);
+      const compKmFactor = Math.min(Math.max(1 - 0.15 * (compKmRatio - 1), 0.6), 1.25);
+      const noise = 0.9 + rand() * 0.2;
+      const source = pickSource(rand, data.marque);
+      let displayed = neuf * ageMult(compAge) * compKmFactor * finitionMult * noise;
+      let retained, adjustLabel;
+      if(source.type === 'pro'){
+        // les pros valorisent la garantie (6-12 mois) : prix affiché tiré légèrement
+        // vers le haut, et quasiment pas de marge de négociation.
+        const warrantyPremium = 1.02 + rand() * 0.06; // +2% à +8%
+        displayed = displayed * warrantyPremium;
+        const proRefaction = 0.01 + rand() * 0.02; // -1% à -3%
+        retained = displayed * (1 - proRefaction);
+        adjustLabel = `garantie pro incluse (+${Math.round((warrantyPremium-1)*100)} %)`;
+      } else {
+        // prix affiché par un particulier : l'expert applique une réfaction pour
+        // se rapprocher du prix de transaction réel (marge de négociation).
+        const refaction = 0.05 + rand() * 0.03; // -5% à -8%
+        retained = displayed * (1 - refaction);
+        adjustLabel = `réfaction négociation −${Math.round(refaction*100)} %`;
+      }
+      displayed = Math.round(displayed / 10) * 10;
+      retained = Math.round(retained / 10) * 10;
+      listings.push({
+        label: `${data.marque} ${data.modele}${data.finition ? ' ' + data.finition : ''}`.trim(),
+        year: compYear,
+        km: compKm,
+        displayed: displayed,
+        price: retained,
+        source: source.name,
+        type: source.type,
+        adjustLabel: adjustLabel
+      });
+    }
+    listings.sort((a,b) => a.price - b.price);
+
+    // Comparatif mixte particuliers + professionnels, sur le prix de transaction
+    // retenu (après réfaction / valorisation garantie) — c'est ce comparatif que
+    // l'expert utilise pour fixer la VRADE, pas les prix affichés bruts.
+    const prices = listings.map(l => l.price).sort((a,b) => a-b);
+    const mid = Math.floor(prices.length/2);
+    const median = prices.length % 2 ? prices[mid] : Math.round((prices[mid-1]+prices[mid])/2);
+    const particuliers = listings.filter(l => l.type === 'particulier');
+    const pros = listings.filter(l => l.type === 'pro');
+
+    const etatAdj = 1 + data.etat;
+    const vrade = Math.round(median * etatAdj / 10) * 10;
+    const low = Math.round(vrade * 0.91 / 10) * 10;
+    const high = Math.round(vrade * 1.09 / 10) * 10;
+
+    const mean = prices.reduce((a,b)=>a+b,0) / prices.length;
+    const variance = prices.reduce((a,b)=>a+Math.pow(b-mean,2),0) / prices.length;
+    const cv = Math.sqrt(variance) / mean;
+    const confidence = Math.round(Math.min(Math.max(98 - cv*260, 42), 98));
+
+    // render gauge: map vrade position within [low*0.85, high*1.15] to -90..90 deg
+    const gMin = low * 0.85, gMax = high * 1.15;
+    const frac = Math.min(Math.max((vrade - gMin) / (gMax - gMin), 0), 1);
+    const angle = -90 + frac * 180;
+    document.getElementById('needle').style.transform = `rotate(${angle}deg)`;
+
+    // bande de confiance (fourchette basse-haute) sur le cadran
+    const bandStartFrac = Math.min(Math.max((low - gMin) / (gMax - gMin), 0), 1);
+    const bandEndFrac = Math.min(Math.max((high - gMin) / (gMax - gMin), 0), 1);
+    const gaugeBand = document.getElementById('gaugeBand');
+    gaugeBand.setAttribute('stroke-dasharray', `${(bandEndFrac - bandStartFrac) * 100} 100`);
+    gaugeBand.setAttribute('stroke-dashoffset', `${-bandStartFrac * 100}`);
+
+    function pointOnArc(f){
+      const theta = (180 - f * 180) * Math.PI / 180;
+      return { x: 170 + 150 * Math.cos(theta), y: 170 - 150 * Math.sin(theta) };
+    }
+    const lowPt = pointOnArc(bandStartFrac), highPt = pointOnArc(bandEndFrac);
+    document.getElementById('bandDotLow').setAttribute('cx', lowPt.x);
+    document.getElementById('bandDotLow').setAttribute('cy', lowPt.y);
+    document.getElementById('bandDotHigh').setAttribute('cx', highPt.x);
+    document.getElementById('bandDotHigh').setAttribute('cy', highPt.y);
+    document.getElementById('gaugeLabelLow').textContent = fmt.format(low);
+    document.getElementById('gaugeLabelHigh').textContent = fmt.format(high);
+
+    document.getElementById('vradeValue').textContent = fmt.format(vrade);
+    document.getElementById('rangeLow').textContent = 'bas ' + fmt.format(low);
+    document.getElementById('rangeHigh').textContent = 'haut ' + fmt.format(high);
+
+    document.getElementById('vehLabel').textContent = `${data.marque} ${data.modele} — ${data.annee}`;
+    document.getElementById('ageOut').textContent = age.toFixed(1) + ' an(s)';
+    document.getElementById('kmOut').textContent = `${fmtKm.format(data.km)} km (réf. ${fmtKm.format(Math.round(expectedKm))} km)`;
+    document.getElementById('segOut').textContent = TIER_LABEL[tier];
+    document.getElementById('etatOut').textContent = (data.etat >= 0 ? '+' : '') + Math.round(data.etat*100) + ' %';
+    document.getElementById('mixOut').textContent = `${particuliers.length} particulier(s) / ${pros.length} professionnel(s)`;
+    document.getElementById('confFill').style.width = confidence + '%';
+    document.getElementById('confNum').textContent = confidence + ' / 100';
+    document.getElementById('sampleCount').textContent = `ÉCHANTILLON — ${listings.length} ANNONCES`;
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    listings.forEach(l => {
+      const diff = ((l.price - median) / median) * 100;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${l.label}<br><span style="color:var(--text-faint); font-size:0.76rem;">${l.source} · <span class="tag ${l.type === 'pro' ? 'above' : 'below'}" style="padding:1px 6px;">${l.type === 'pro' ? 'Pro' : 'Particulier'}</span></span></td>
+        <td>${l.year}</td>
+        <td>${fmtKm.format(l.km)} km</td>
+        <td>${fmt.format(l.displayed)}</td>
+        <td>${fmt.format(l.price)}<br><span style="color:var(--text-faint); font-size:0.72rem;">${l.adjustLabel}</span></td>
+        <td><span class="tag ${Math.abs(diff) < 2 ? 'median' : (diff > 0 ? 'above' : 'below')}">${diff > 0 ? '+' : ''}${diff.toFixed(1)} %</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    resultSection.classList.add('visible');
+    resultSection.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'});
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    errorMsg.textContent = '';
+
+    const data = {
+      marque: fieldValue(marqueSelect, marqueAutre),
+      modele: fieldValue(modeleSelect, modeleAutre),
+      finition: fieldValue(finitionSelect, finitionAutre),
+      carburant: document.getElementById('carburant').value,
+      annee: parseInt(document.getElementById('annee').value, 10),
+      km: parseInt(document.getElementById('km').value, 10),
+      dateSinistre: document.getElementById('dateSinistre').value,
+      etat: parseFloat(document.getElementById('etat').value),
+      prixNeuf: parseFloat(document.getElementById('prixNeuf').value) || 0
+    };
+
+    if(!data.marque || !data.modele || !data.annee || (!data.km && data.km !== 0)){
+      errorMsg.textContent = 'Merci de renseigner au minimum la marque, le modèle, l\u2019année et le kilométrage.';
+      return;
+    }
+    if(data.annee < 1990 || data.annee > new Date().getFullYear()){
+      errorMsg.textContent = 'Année de mise en circulation invalide.';
+      return;
+    }
+
+    computeAndRender(data);
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    form.reset();
+    document.getElementById('dateSinistre').valueAsDate = new Date();
+    modeleSelect.disabled = true;
+    finitionSelect.disabled = true;
+    modeleSelect.innerHTML = '<option value="">— Choisir une marque d\'abord —</option>';
+    finitionSelect.innerHTML = '<option value="">— Choisir une marque d\'abord —</option>';
+    marqueAutre.style.display = 'none'; marqueAutre.value = '';
+    modeleAutre.style.display = 'none'; modeleAutre.value = '';
+    finitionAutre.style.display = 'none'; finitionAutre.value = '';
+    resultSection.classList.remove('visible');
+    errorMsg.textContent = '';
+    dossierNum.textContent = 'VR-' + Math.floor(1000 + Math.random()*8999);
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    window.print();
+  });
+  // pour l'impression, on déplie toute la méthodologie afin qu'elle soit lisible sur le PDF
+  let detailsWereOpen = [];
+  window.addEventListener('beforeprint', function(){
+    detailsWereOpen = Array.from(document.querySelectorAll('details')).map(d => d.open);
+    document.querySelectorAll('details').forEach(d => d.open = true);
+  });
+  window.addEventListener('afterprint', function(){
+    document.querySelectorAll('details').forEach((d, i) => d.open = detailsWereOpen[i]);
+  });
+})();
+</script>
+
+</body>
+</html>
